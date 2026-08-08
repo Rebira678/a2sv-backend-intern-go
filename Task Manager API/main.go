@@ -15,6 +15,7 @@ type Task struct {
 	Status      string    `json:"status"`
 }
 
+// mock data for tasks
 var tasks = []Task{
 	{ID: "1", Title: "Task 1", Description: "First task", DueDate: time.Now(), Status: "Pending"},
 	{ID: "2", Title: "Task 2", Description: "Second task", DueDate: time.Now().AddDate(0, 0, 1), Status: "In Progress"},
@@ -23,11 +24,6 @@ var tasks = []Task{
 
 func main() {
 	router := gin.Default()
-	router.GET("/ping", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
 
 	//Getting All Tasks (GET /tasks)
 	router.GET("/tasks", func(ctx *gin.Context) {
@@ -36,7 +32,7 @@ func main() {
 
 	//Getting a specific Task (GET /tasks/:id)
 	router.GET("/tasks/:id", func(ctx *gin.Context) {
-		id := ctx.param("id")
+		id := ctx.Param("id")
 
 		for _, task := range tasks {
 			if task.ID == id {
@@ -53,10 +49,55 @@ func main() {
 
 		var updatedTask Task
 		if err := ctx.ShouldBindJSON(&updatedTask); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error: err.Error()"})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
+		for i, task := range tasks {
+			if task.ID == id {
+				//update only the specified fields
+				if updatedTask.Title != "" {
+					tasks[i].Title = updatedTask.Title
+				}
+				if updatedTask.Description != "" {
+					tasks[i].Description = updatedTask.Description
+				}
+
+				ctx.JSON(http.StatusOK, gin.H{"message": "Task updated"})
+				return
+			}
+		}
+
+		ctx.JSON(http.StatusNotFound, gin.H{"message": "task not found"})
+
+	})
+
+	//Deleting a specific Task (DELETE/tasks/:id)
+	router.DELETE("/tasks/:id", func(ctx *gin.Context) {
+		id := ctx.Param("id")
+
+		for i, val := range tasks {
+			if val.ID == id {
+				tasks = append(tasks[:i], tasks[i+1:]...)
+				ctx.JSON(http.StatusOK, gin.H{"message": "Task removed"})
+				return
+			}
+		}
+
+		ctx.JSON(http.StatusNotFound, gin.H{"message": "Task not found"})
+	})
+
+	// Creating Tasks(POST/tasks)
+	router.POST("/tasks", func(ctx *gin.Context) {
+		var newTask Task
+
+		if err := ctx.ShouldBindJSON(&newTask); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		tasks = append(tasks, newTask)
+		ctx.JSON(http.StatusCreated, gin.H{"message": "Task Created"})
 	})
 
 	router.Run() //listen and serve on 0.0.0.0:8080
