@@ -1,0 +1,3 @@
+module Task5_Implementing_Authentication_Authorization_with_JWT_for_task_management_api
+
+go 1.26.5
